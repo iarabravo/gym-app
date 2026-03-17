@@ -70,3 +70,49 @@ html.light .hover\:bg-slate-800:hover {
 html.light .hover\:bg-slate-700:hover {
   background: #cbd5e1 !important;
 }
+
+html.light .from-slate-800,
+html.light .to-slate-900,
+html.light .bg-gradient-to-br.from-slate-800.to-slate-900 {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+html.light .bg-red-500\/10 {
+  background: rgba(239, 68, 68, 0.08) !important;
+}
+
+html.light .bg-red-500\/20 {
+  background: rgba(239, 68, 68, 0.14) !important;
+}
+
+html.light .bg-green-500\/20 {
+  background: rgba(34, 197, 94, 0.14) !important;
+}
+
+html.light .bg-yellow-500\/20 {
+  background: rgba(234, 179, 8, 0.14) !important;
+}
+
+html.light .text-red-400 {
+  color: #dc2626 !important;
+}
+
+html.light .text-green-400 {
+  color: #16a34a !important;
+}
+
+html.light .text-yellow-400 {
+  color: #ca8a04 !important;
+}
+
+html.light .font-semibold,
+html.light .font-bold {
+  color: inherit;
+}
+
+html.light img.border-slate-700,
+html.light .border-2.border-slate-700,
+html.light .border.border-slate-700 {
+  border-color: #d6deea !important;
+}
