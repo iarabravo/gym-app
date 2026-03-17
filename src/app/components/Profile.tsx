@@ -73,7 +73,7 @@ export default function Profile() {
       title: 'Cuenta',
       items: [
         { icon: User, label: 'Información personal', action: () => navigate('/profile/edit') },
-        { icon: Mail, label: 'Email y contraseña', action: () => {} },
+        { icon: Mail, label: 'Email y contraseña', action: () => navigate('/profile/security') },
         { icon: CreditCard, label: 'Métodos de pago', action: () => navigate('/membership') }
       ]
     },

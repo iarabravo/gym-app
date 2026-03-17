@@ -11,6 +11,7 @@ import Progress from "./components/Progress";
 import Profile from "./components/Profile";
 import EditProfile from "./components/EditProfile";
 import Notifications from "./components/Notifications";
+import EditCredentials from "./components/EditCredentials";
 
 export const router = createHashRouter([
   {
@@ -27,6 +28,7 @@ export const router = createHashRouter([
       { path: "progress", Component: Progress },
       { path: "profile", Component: Profile },
       { path: "profile/edit", Component: EditProfile },
+      { path: "profile/security", Component: EditCredentials },
       { path: "notifications", Component: Notifications },
     ],
   },
