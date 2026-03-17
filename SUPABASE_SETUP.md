@@ -11,6 +11,13 @@
 ```bash
 supabase secrets set PROJECT_URL=https://your-project-id.supabase.co
 supabase secrets set SERVICE_ROLE_KEY=your-service-role-key
+supabase secrets set MP_ACCESS_TOKEN=your-mercado-pago-access-token
+```
+
+Optional secrets for payment return flow:
+
+```bash
+supabase secrets set APP_RETURN_URL=https://your-app-return-url
 ```
 
 6. Deploy your edge function from [functions/server/index.tsx](/Users/iarabravo/Desktop/Gym/functions/server/index.tsx).

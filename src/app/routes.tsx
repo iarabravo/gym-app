@@ -5,6 +5,7 @@ import Login from "./components/Login";
 import Signup from "./components/Signup";
 import Access from "./components/Access";
 import Membership from "./components/Membership";
+import MembershipCheckout from "./components/MembershipCheckout";
 import Classes from "./components/Classes";
 import Routines from "./components/Routines";
 import Progress from "./components/Progress";
@@ -24,6 +25,7 @@ export const router = createHashRouter([
       { path: "signup", Component: Signup },
       { path: "access", Component: Access },
       { path: "membership", Component: Membership },
+      { path: "membership/checkout/:planId", Component: MembershipCheckout },
       { path: "classes", Component: Classes },
       { path: "routines", Component: Routines },
       { path: "progress", Component: Progress },

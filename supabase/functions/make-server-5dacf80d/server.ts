@@ -14,6 +14,80 @@ const supabase = createClient(
   Deno.env.get('SERVICE_ROLE_KEY') ?? ''
 );
 
+const PLAN_CATALOG: Record<string, { id: string; name: string; price: number }> = {
+  basic: { id: 'basic', name: 'Basico', price: 1 },
+  premium: { id: 'premium', name: 'Premium', price: 49 },
+  vip: { id: 'vip', name: 'VIP', price: 79 },
+};
+
+function getPlanConfig(planId: string) {
+  return PLAN_CATALOG[planId];
+}
+
+async function activateMembershipForUser(userId: string, plan: string, paymentMethod: string) {
+  const startDate = new Date();
+  const endDate = new Date();
+  endDate.setMonth(endDate.getMonth() + 1);
+
+  const membership = {
+    userId,
+    plan,
+    status: 'active',
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+    paymentMethod,
+    autoRenew: true
+  };
+
+  await kv.set(`membership:${userId}`, membership);
+
+  const profile = await kv.get(`user:${userId}`);
+  if (profile) {
+    profile.membershipStatus = 'active';
+    await kv.set(`user:${userId}`, profile);
+  }
+
+  return membership;
+}
+
+async function registerCompletedPayment({
+  userId,
+  amount,
+  concept,
+  paymentMethod,
+  externalReference,
+  providerPaymentId,
+  providerStatus,
+}: {
+  userId: string;
+  amount: number;
+  concept: string;
+  paymentMethod: string;
+  externalReference?: string;
+  providerPaymentId?: string;
+  providerStatus?: string;
+}) {
+  const paymentId = providerPaymentId
+    ? `${userId}:${providerPaymentId}`
+    : `${userId}:${Date.now()}`;
+
+  const payment = {
+    id: paymentId,
+    userId,
+    amount,
+    concept,
+    paymentMethod,
+    externalReference,
+    providerPaymentId,
+    providerStatus,
+    status: 'completed',
+    date: new Date().toISOString()
+  };
+
+  await kv.set(`payment:${payment.id}`, payment);
+  return payment;
+}
+
 // ============= AUTH ROUTES =============
 
 // Sign up route
@@ -363,29 +437,7 @@ app.post('/make-server-5dacf80d/membership/subscribe', async (c) => {
     }
 
     const { plan, paymentMethod } = await c.req.json();
-    
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + 1);
-
-    const membership = {
-      userId: user.id,
-      plan, // 'basic', 'premium', 'vip'
-      status: 'active',
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      paymentMethod,
-      autoRenew: true
-    };
-
-    await kv.set(`membership:${user.id}`, membership);
-
-    // Update user profile status
-    const profile = await kv.get(`user:${user.id}`);
-    if (profile) {
-      profile.membershipStatus = 'active';
-      await kv.set(`user:${user.id}`, profile);
-    }
+    const membership = await activateMembershipForUser(user.id, plan, paymentMethod);
 
     return c.json({ membership });
   } catch (error) {
@@ -427,23 +479,227 @@ app.post('/make-server-5dacf80d/payments/process', async (c) => {
     }
 
     const { amount, concept, paymentMethod } = await c.req.json();
-
-    const payment = {
-      id: `${user.id}:${Date.now()}`,
+    const payment = await registerCompletedPayment({
       userId: user.id,
       amount,
       concept,
       paymentMethod,
-      status: 'completed',
-      date: new Date().toISOString()
-    };
-
-    await kv.set(`payment:${payment.id}`, payment);
+    });
 
     return c.json({ payment });
   } catch (error) {
     console.log(`Payment processing error: ${error}`);
     return c.json({ error: 'Error processing payment' }, 500);
+  }
+});
+
+app.post('/make-server-5dacf80d/payments/mercadopago/preference', async (c) => {
+  try {
+    const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN');
+    if (!mpAccessToken) {
+      return c.json({ error: 'Falta configurar MP_ACCESS_TOKEN en Supabase' }, 500);
+    }
+
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+
+    if (!user?.id || error) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const { planId } = await c.req.json();
+    const plan = getPlanConfig(planId);
+
+    if (!plan) {
+      return c.json({ error: 'Plan invalido' }, 400);
+    }
+
+    const profile = await kv.get(`user:${user.id}`);
+    const externalReference = `${user.id}:${plan.id}:${Date.now()}`;
+    const notificationUrl = Deno.env.get('MP_WEBHOOK_URL');
+    const appReturnUrl = Deno.env.get('APP_RETURN_URL');
+
+    const preferencePayload: Record<string, unknown> = {
+      items: [
+        {
+          id: plan.id,
+          title: `Membresia ${plan.name}`,
+          description: `Plan ${plan.name} mensual`,
+          quantity: 1,
+          currency_id: 'ARS',
+          unit_price: plan.price,
+        }
+      ],
+      external_reference: externalReference,
+      statement_descriptor: 'GYMAPP',
+      payer: {
+        email: user.email,
+        name: profile?.name,
+      },
+      metadata: {
+        user_id: user.id,
+        plan_id: plan.id,
+        plan_name: plan.name,
+      }
+    };
+
+    if (notificationUrl) {
+      preferencePayload.notification_url = notificationUrl;
+    }
+
+    if (appReturnUrl) {
+      preferencePayload.back_urls = {
+        success: appReturnUrl,
+        pending: appReturnUrl,
+        failure: appReturnUrl,
+      };
+      preferencePayload.auto_return = 'approved';
+    }
+
+    const response = await fetch('https://api.mercadopago.com/checkout/preferences', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${mpAccessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(preferencePayload),
+    });
+
+    const responseData = await response.json();
+    if (!response.ok) {
+      console.log('Mercado Pago preference error:', responseData);
+      return c.json({ error: 'No se pudo crear el link de pago' }, 500);
+    }
+
+    await kv.set(`payment_intent:${externalReference}`, {
+      externalReference,
+      userId: user.id,
+      planId: plan.id,
+      planName: plan.name,
+      amount: plan.price,
+      paymentMethod: 'mercado_pago',
+      preferenceId: responseData.id,
+      checkoutUrl: responseData.init_point,
+      sandboxCheckoutUrl: responseData.sandbox_init_point,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    });
+
+    return c.json({
+      externalReference,
+      preferenceId: responseData.id,
+      checkoutUrl: responseData.init_point,
+      sandboxCheckoutUrl: responseData.sandbox_init_point,
+      plan,
+    });
+  } catch (error) {
+    console.log(`Mercado Pago preference error: ${error}`);
+    return c.json({ error: 'Error creando el pago con Mercado Pago' }, 500);
+  }
+});
+
+app.post('/make-server-5dacf80d/payments/mercadopago/confirm', async (c) => {
+  try {
+    const mpAccessToken = Deno.env.get('MP_ACCESS_TOKEN');
+    if (!mpAccessToken) {
+      return c.json({ error: 'Falta configurar MP_ACCESS_TOKEN en Supabase' }, 500);
+    }
+
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+
+    if (!user?.id || error) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const { externalReference } = await c.req.json();
+    if (!externalReference) {
+      return c.json({ error: 'Falta externalReference' }, 400);
+    }
+
+    const paymentIntent = await kv.get(`payment_intent:${externalReference}`);
+    if (!paymentIntent || paymentIntent.userId !== user.id) {
+      return c.json({ error: 'Pago pendiente no encontrado' }, 404);
+    }
+
+    if (paymentIntent.status === 'approved' && paymentIntent.completedPaymentId) {
+      const existingMembership = await kv.get(`membership:${user.id}`);
+      const existingPayment = await kv.get(`payment:${paymentIntent.completedPaymentId}`);
+      return c.json({
+        paymentStatus: 'approved',
+        membership: existingMembership,
+        payment: existingPayment,
+        planName: paymentIntent.planName,
+      });
+    }
+
+    const searchUrl = new URL('https://api.mercadopago.com/v1/payments/search');
+    searchUrl.searchParams.set('external_reference', externalReference);
+    searchUrl.searchParams.set('sort', 'date_created');
+    searchUrl.searchParams.set('criteria', 'desc');
+    searchUrl.searchParams.set('limit', '1');
+
+    const response = await fetch(searchUrl.toString(), {
+      headers: {
+        Authorization: `Bearer ${mpAccessToken}`,
+      },
+    });
+    const responseData = await response.json();
+
+    if (!response.ok) {
+      console.log('Mercado Pago confirm error:', responseData);
+      return c.json({ error: 'No se pudo validar el pago en Mercado Pago' }, 500);
+    }
+
+    const latestPayment = responseData.results?.[0];
+    if (!latestPayment) {
+      return c.json({ paymentStatus: 'pending', statusDetail: 'not_found' }, 202);
+    }
+
+    if (latestPayment.status !== 'approved') {
+      await kv.set(`payment_intent:${externalReference}`, {
+        ...paymentIntent,
+        status: latestPayment.status,
+        providerPaymentId: String(latestPayment.id),
+        providerStatus: latestPayment.status,
+        lastCheckedAt: new Date().toISOString(),
+      });
+
+      return c.json({
+        paymentStatus: latestPayment.status,
+        statusDetail: latestPayment.status_detail,
+      }, latestPayment.status === 'rejected' || latestPayment.status === 'cancelled' ? 400 : 202);
+    }
+
+    const membership = await activateMembershipForUser(user.id, paymentIntent.planId, 'mercado_pago');
+    const payment = await registerCompletedPayment({
+      userId: user.id,
+      amount: Number(latestPayment.transaction_amount || paymentIntent.amount),
+      concept: `Plan ${paymentIntent.planName}`,
+      paymentMethod: 'mercado_pago',
+      externalReference,
+      providerPaymentId: String(latestPayment.id),
+      providerStatus: latestPayment.status,
+    });
+
+    await kv.set(`payment_intent:${externalReference}`, {
+      ...paymentIntent,
+      status: 'approved',
+      providerPaymentId: String(latestPayment.id),
+      providerStatus: latestPayment.status,
+      completedPaymentId: payment.id,
+      approvedAt: new Date().toISOString(),
+    });
+
+    return c.json({
+      paymentStatus: 'approved',
+      membership,
+      payment,
+      planName: paymentIntent.planName,
+    });
+  } catch (error) {
+    console.log(`Mercado Pago confirm error: ${error}`);
+    return c.json({ error: 'Error confirmando el pago con Mercado Pago' }, 500);
   }
 });
 

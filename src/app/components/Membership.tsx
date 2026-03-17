@@ -1,32 +1,39 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from './AuthContext';
 import { 
   ArrowLeft, 
-  CreditCard, 
   Check, 
   Crown, 
   Star,
   Zap,
-  Calendar,
-  DollarSign,
   History
 } from 'lucide-react';
 import { functionsUrl } from '@project-supabase/config';
 
+const PENDING_PAYMENT_KEY = 'gymapp_pending_payment';
+
 export default function Membership() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { accessToken } = useAuth();
   const [membership, setMembership] = useState<any>(null);
   const [payments, setPayments] = useState<any[]>([]);
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [showPayments, setShowPayments] = useState(false);
+  const [checkoutMessage, setCheckoutMessage] = useState('');
+
+  const paymentSuccess = location.state?.paymentSuccess;
+  const planName = location.state?.planName;
 
   useEffect(() => {
+    if (!accessToken) {
+      return;
+    }
+
     fetchMembership();
     fetchPayments();
-  }, []);
+    confirmPendingPayment();
+  }, [accessToken]);
 
   const fetchMembership = async () => {
     try {
@@ -62,38 +69,44 @@ export default function Membership() {
     }
   };
 
-  const handleSubscribe = async () => {
-    if (!selectedPlan) return;
+  const confirmPendingPayment = async () => {
+    const rawValue = window.localStorage.getItem(PENDING_PAYMENT_KEY);
+    if (!rawValue || !accessToken) {
+      return;
+    }
 
-    setLoading(true);
     try {
-      const response = await fetch(
-        functionsUrl('/membership/subscribe'),
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`
-          },
-          body: JSON.stringify({
-            plan: selectedPlan,
-            paymentMethod: 'card'
-          })
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Error al suscribirse');
+      const pendingPayment = JSON.parse(rawValue);
+      if (!pendingPayment?.externalReference) {
+        return;
       }
 
-      await fetchMembership();
-      setSelectedPlan(null);
-      alert('¡Suscripción exitosa!');
+      const response = await fetch(functionsUrl('/payments/mercadopago/confirm'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          externalReference: pendingPayment.externalReference,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok && data.paymentStatus === 'approved') {
+        window.localStorage.removeItem(PENDING_PAYMENT_KEY);
+        setCheckoutMessage(`Pago confirmado. Tu plan elegido ahora es ${data.planName || pendingPayment.planName}.`);
+        fetchMembership();
+        fetchPayments();
+        return;
+      }
+
+      if (data.paymentStatus === 'rejected' || data.paymentStatus === 'cancelled') {
+        window.localStorage.removeItem(PENDING_PAYMENT_KEY);
+        setCheckoutMessage('El ultimo intento de pago fue cancelado o rechazado.');
+      }
     } catch (error) {
-      console.error('Error subscribing:', error);
-      alert('Error al procesar la suscripción');
-    } finally {
-      setLoading(false);
+      console.error('Error confirming pending payment:', error);
     }
   };
 
@@ -101,7 +114,7 @@ export default function Membership() {
     {
       id: 'basic',
       name: 'Básico',
-      price: 29,
+      price: 1,
       icon: Zap,
       color: 'from-blue-500 to-cyan-500',
       features: [
@@ -151,6 +164,11 @@ export default function Membership() {
     });
   };
 
+  const currentPlanIndex = useMemo(() => {
+    const currentPlanId = membership?.plan;
+    return plans.findIndex((plan) => plan.id === currentPlanId);
+  }, [membership]);
+
   return (
     <div className="size-full bg-slate-950 text-white overflow-auto">
       {/* Header */}
@@ -176,6 +194,20 @@ export default function Membership() {
       </div>
 
       <div className="max-w-md mx-auto px-4 py-6 pb-24">
+        {paymentSuccess && (
+          <div className="mb-6 bg-green-500/10 border border-green-500/30 rounded-2xl p-4">
+            <p className="font-semibold text-green-400">Pago realizado con exito</p>
+            <p className="text-sm text-slate-300 mt-1">Tu plan elegido ahora es {planName}.</p>
+          </div>
+        )}
+
+        {checkoutMessage && (
+          <div className="mb-6 bg-blue-500/10 border border-blue-500/30 rounded-2xl p-4">
+            <p className="font-semibold text-blue-300">Actualizacion de membresia</p>
+            <p className="text-sm text-slate-300 mt-1">{checkoutMessage}</p>
+          </div>
+        )}
+
         {/* Current Membership */}
         {membership && (
           <div className="mb-6 bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-5">
@@ -227,9 +259,9 @@ export default function Membership() {
                     <p className="font-semibold">{payment.concept}</p>
                     <p className="text-lg font-bold text-green-400">${payment.amount}</p>
                   </div>
-                  <div className="flex items-center justify-between text-sm text-slate-400">
-                    <span>{formatDate(payment.date)}</span>
-                    <span className="capitalize">{payment.paymentMethod}</span>
+                    <div className="flex items-center justify-between text-sm text-slate-400">
+                      <span>{formatDate(payment.date)}</span>
+                    <span className="capitalize">{String(payment.paymentMethod).replaceAll('_', ' ')}</span>
                   </div>
                 </div>
               ))}
@@ -249,7 +281,7 @@ export default function Membership() {
                 <div
                   key={plan.id}
                   className={`bg-slate-900 border-2 rounded-2xl p-5 transition-all ${
-                    selectedPlan === plan.id
+                    membership?.plan === plan.id
                       ? 'border-blue-500 shadow-lg shadow-blue-500/20'
                       : 'border-slate-800 hover:border-slate-700'
                   } ${plan.popular ? 'relative' : ''}`}
@@ -275,14 +307,19 @@ export default function Membership() {
                     </div>
 
                     <button
-                      onClick={() => setSelectedPlan(plan.id)}
+                      onClick={() => navigate(`/membership/checkout/${plan.id}`)}
+                      disabled={membership?.plan === plan.id}
                       className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                        selectedPlan === plan.id
+                        membership?.plan === plan.id
                           ? 'bg-blue-500 text-white'
                           : 'bg-slate-800 hover:bg-slate-700'
                       }`}
                     >
-                      {selectedPlan === plan.id ? 'Seleccionado' : 'Seleccionar'}
+                      {membership?.plan === plan.id
+                        ? 'Plan elegido'
+                        : membership && currentPlanIndex >= 0
+                          ? 'Mejorar plan'
+                          : 'Ir a pagar'}
                     </button>
                   </div>
 
@@ -298,17 +335,6 @@ export default function Membership() {
               ))}
             </div>
 
-            {/* Subscribe Button */}
-            {selectedPlan && (
-              <button
-                onClick={handleSubscribe}
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 font-semibold py-4 rounded-xl transition-all flex items-center justify-center gap-2"
-              >
-                <CreditCard className="w-5 h-5" />
-                {loading ? 'Procesando...' : 'Suscribirse Ahora'}
-              </button>
-            )}
           </>
         )}
 
