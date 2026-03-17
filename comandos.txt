@@ -1,0 +1,14 @@
+Iara hacer esto: 
+git add .
+git commit -m "cambios"
+git push
+
+Ainara hacer esto:
+git pull
+
+
+Para ejecutar la app en ios:
+cd /Users/iarabravo/Desktop/Gym
+npm run build
+npx cap sync ios
+open ios/App/App.xcworkspace
