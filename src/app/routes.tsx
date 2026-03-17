@@ -12,6 +12,7 @@ import Profile from "./components/Profile";
 import EditProfile from "./components/EditProfile";
 import Notifications from "./components/Notifications";
 import EditCredentials from "./components/EditCredentials";
+import SettingsPage from "./components/SettingsPage";
 
 export const router = createHashRouter([
   {
@@ -29,6 +30,7 @@ export const router = createHashRouter([
       { path: "profile", Component: Profile },
       { path: "profile/edit", Component: EditProfile },
       { path: "profile/security", Component: EditCredentials },
+      { path: "settings", Component: SettingsPage },
       { path: "notifications", Component: Notifications },
     ],
   },

@@ -74,14 +74,14 @@ export default function Profile() {
       items: [
         { icon: User, label: 'Información personal', action: () => navigate('/profile/edit') },
         { icon: Mail, label: 'Email y contraseña', action: () => navigate('/profile/security') },
-        { icon: CreditCard, label: 'Métodos de pago', action: () => navigate('/membership') }
+        { icon: CreditCard, label: 'Membresías', action: () => navigate('/membership') }
       ]
     },
     {
       title: 'Preferencias',
       items: [
         { icon: Bell, label: 'Notificaciones', action: () => navigate('/notifications') },
-        { icon: Settings, label: 'Configuración', action: () => {} },
+        { icon: Settings, label: 'Configuración', action: () => navigate('/settings') },
         { icon: Shield, label: 'Privacidad y seguridad', action: () => {} }
       ]
     },

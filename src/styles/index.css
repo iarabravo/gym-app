@@ -18,3 +18,55 @@ body {
   overscroll-behavior: none;
   background: #020617;
 }
+
+html.light {
+  background: #f8fafc;
+}
+
+html.light body {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+html.light .bg-slate-950 {
+  background: #f8fafc !important;
+}
+
+html.light .bg-slate-900 {
+  background: #ffffff !important;
+}
+
+html.light .bg-slate-800 {
+  background: #edf2f7 !important;
+}
+
+html.light .bg-slate-700 {
+  background: #e2e8f0 !important;
+}
+
+html.light .border-slate-800,
+html.light .border-slate-700 {
+  border-color: #dbe4ee !important;
+}
+
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-300 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-400,
+html.light .text-slate-500,
+html.light .text-slate-600 {
+  color: #64748b !important;
+}
+
+html.light .hover\:bg-slate-800:hover {
+  background: #e2e8f0 !important;
+}
+
+html.light .hover\:bg-slate-700:hover {
+  background: #cbd5e1 !important;
+}
