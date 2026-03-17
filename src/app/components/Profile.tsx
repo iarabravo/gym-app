@@ -8,8 +8,6 @@ import {
   CreditCard,
   Settings,
   Bell,
-  Shield,
-  HelpCircle,
   LogOut,
   ChevronRight,
   Edit
@@ -81,15 +79,7 @@ export default function Profile() {
       title: 'Preferencias',
       items: [
         { icon: Bell, label: 'Notificaciones', action: () => navigate('/notifications') },
-        { icon: Settings, label: 'Configuración', action: () => navigate('/settings') },
-        { icon: Shield, label: 'Privacidad y seguridad', action: () => {} }
-      ]
-    },
-    {
-      title: 'Soporte',
-      items: [
-        { icon: HelpCircle, label: 'Centro de ayuda', action: () => {} },
-        { icon: Mail, label: 'Contactar soporte', action: () => {} }
+        { icon: Settings, label: 'Configuración', action: () => navigate('/settings') }
       ]
     }
   ];
@@ -181,30 +171,6 @@ export default function Profile() {
             >
               Ver detalles de membresía
             </button>
-          </div>
-        )}
-
-        {/* Stats */}
-        {profile?.progress && (
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-blue-400 mb-1">
-                {profile.progress.workoutsCompleted}
-              </p>
-              <p className="text-xs text-slate-400">Entrenamientos</p>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-green-400 mb-1">
-                {profile.progress.totalMinutes}
-              </p>
-              <p className="text-xs text-slate-400">Minutos</p>
-            </div>
-            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-orange-400 mb-1">
-                {profile.progress.streak}
-              </p>
-              <p className="text-xs text-slate-400">Racha días</p>
-            </div>
           </div>
         )}
 
