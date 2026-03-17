@@ -114,9 +114,17 @@ export default function Profile() {
         <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-6 mb-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-4">
-              <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-3xl font-bold">
-                {profile?.name?.charAt(0) || 'U'}
-              </div>
+              {profile?.avatarUrl ? (
+                <img
+                  src={profile.avatarUrl}
+                  alt={profile?.name || 'Usuario'}
+                  className="w-20 h-20 rounded-full object-cover border border-slate-700"
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-3xl font-bold">
+                  {profile?.name?.charAt(0) || 'U'}
+                </div>
+              )}
               <div>
                 <h2 className="text-2xl font-bold mb-1">{profile?.name || 'Usuario'}</h2>
                 <p className="text-slate-400 text-sm">{user?.email}</p>

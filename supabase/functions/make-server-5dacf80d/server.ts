@@ -191,6 +191,7 @@ app.get('/make-server-5dacf80d/profile', async (c) => {
       phone: userData.telefono,
       level: userData.nivel,
       objetivo: userData.objetivo,
+      avatarUrl: userData.avatar_url,
       createdAt: userData.created_at,
       // Include KV data for backward compatibility
       membershipStatus: kvProfile?.membershipStatus || 'inactive',
@@ -254,6 +255,7 @@ app.put('/make-server-5dacf80d/profile', async (c) => {
     if (body.dni) updateData.dni = body.dni;
     if (body.level) updateData.nivel = body.level;
     if (body.objetivo) updateData.objetivo = body.objetivo;
+    if (body.avatarUrl !== undefined) updateData.avatar_url = body.avatarUrl;
 
     if (Object.keys(updateData).length > 0) {
       const { data: updatedData, error: dbError } = await supabase
@@ -317,6 +319,7 @@ app.put('/make-server-5dacf80d/profile', async (c) => {
       phone: finalProfile.telefono,
       level: finalProfile.nivel,
       objetivo: finalProfile.objetivo,
+      avatarUrl: finalProfile.avatar_url,
       membershipStatus: kvProfile?.membershipStatus || 'inactive',
       progress: kvProfile?.progress || { workoutsCompleted: 0, totalMinutes: 0, streak: 0 }
     };

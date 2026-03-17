@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from './AuthContext';
-import { ArrowLeft, Save, User, Phone, Calendar, CreditCard } from 'lucide-react';
+import { ArrowLeft, Camera, Save, User } from 'lucide-react';
 import { functionsUrl } from '@project-supabase/config';
 import { supabase } from '@project-supabase/client';
 
@@ -12,6 +12,9 @@ export default function EditProfile() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -20,7 +23,8 @@ export default function EditProfile() {
     birthdate: '',
     address: '',
     emergencyContact: '',
-    emergencyPhone: ''
+    emergencyPhone: '',
+    avatarUrl: ''
   });
 
   useEffect(() => {
@@ -58,8 +62,10 @@ export default function EditProfile() {
           birthdate: data.profile.birthdate || '',
           address: data.profile.address || '',
           emergencyContact: data.profile.emergencyContact || '',
-          emergencyPhone: data.profile.emergencyPhone || ''
+          emergencyPhone: data.profile.emergencyPhone || '',
+          avatarUrl: data.profile.avatarUrl || ''
         });
+        setAvatarPreview(data.profile.avatarUrl || '');
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -83,6 +89,28 @@ export default function EditProfile() {
 
       // Combine firstName and lastName
       const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      let avatarUrl = formData.avatarUrl;
+
+      if (avatarFile && user?.id) {
+        const extension = avatarFile.name.split('.').pop()?.toLowerCase() || 'jpg';
+        const filePath = `${user.id}/avatar-${Date.now()}.${extension}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, avatarFile, {
+            cacheControl: '3600',
+            upsert: true,
+            contentType: avatarFile.type,
+          });
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+        avatarUrl = publicUrlData.publicUrl;
+      }
 
       const response = await fetch(
         functionsUrl('/profile'),
@@ -99,7 +127,8 @@ export default function EditProfile() {
             birthdate: formData.birthdate,
             address: formData.address,
             emergencyContact: formData.emergencyContact,
-            emergencyPhone: formData.emergencyPhone
+            emergencyPhone: formData.emergencyPhone,
+            avatarUrl
           })
         }
       );
@@ -109,6 +138,8 @@ export default function EditProfile() {
       console.log('Response data:', responseData);
 
       if (response.ok) {
+        setFormData((current) => ({ ...current, avatarUrl }));
+        setAvatarFile(null);
         setSuccessMessage('Perfil actualizado exitosamente.');
         navigate('/profile');
       } else {
@@ -128,6 +159,14 @@ export default function EditProfile() {
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
   };
 
   if (loading) {
@@ -170,13 +209,47 @@ export default function EditProfile() {
         {/* Profile Picture */}
         <div className="flex flex-col items-center mb-8">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-4xl font-bold mb-3">
-              {formData.firstName?.charAt(0) || formData.lastName?.charAt(0) || 'U'}
-            </div>
-            <button className="absolute bottom-0 right-0 p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors">
-              <User className="w-4 h-4" />
+            {avatarPreview ? (
+              <img
+                src={avatarPreview}
+                alt="Foto de perfil"
+                className="w-24 h-24 rounded-full object-cover border-2 border-slate-700 mb-3"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-4xl font-bold mb-3">
+                {formData.firstName?.charAt(0) || formData.lastName?.charAt(0) || 'U'}
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute bottom-0 right-0 p-2 bg-blue-500 rounded-full hover:bg-blue-600 transition-colors"
+            >
+              <Camera className="w-4 h-4" />
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              onChange={handleAvatarChange}
+              className="hidden"
+            />
           </div>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            Cambiar foto
+          </button>
+          {avatarFile && (
+            <p className="text-xs text-slate-400 mt-2">
+              La foto se subira cuando guardes el perfil.
+            </p>
+          )}
+          {successMessage && (
+            <p className="text-sm text-green-400 mt-2">{successMessage}</p>
+          )}
           <p className="text-sm text-slate-400 mt-2">{user?.email}</p>
         </div>
 

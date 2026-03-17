@@ -134,9 +134,17 @@ export default function Home() {
       <div className="sticky top-0 z-50 bg-slate-900 border-b border-slate-800">
         <div className="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold">
-              {profile?.name?.charAt(0) || 'U'}
-            </div>
+            {profile?.avatarUrl ? (
+              <img
+                src={profile.avatarUrl}
+                alt={profile?.name || 'Usuario'}
+                className="w-10 h-10 rounded-full object-cover border border-slate-700"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center font-bold">
+                {profile?.name?.charAt(0) || 'U'}
+              </div>
+            )}
             <div>
               <h1 className="text-lg font-bold">Hola, {profile?.name || 'Usuario'}</h1>
               <p className="text-xs text-slate-400">Bienvenido de vuelta</p>

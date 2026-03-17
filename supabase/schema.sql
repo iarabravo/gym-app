@@ -10,6 +10,7 @@ create table if not exists public.users (
   telefono text not null default '',
   nivel text not null default 'principiante',
   objetivo text not null default '',
+  avatar_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -23,6 +24,7 @@ alter table public.users add column if not exists dni text not null default '';
 alter table public.users add column if not exists telefono text not null default '';
 alter table public.users add column if not exists nivel text not null default 'principiante';
 alter table public.users add column if not exists objetivo text not null default '';
+alter table public.users add column if not exists avatar_url text;
 alter table public.users add column if not exists created_at timestamptz not null default now();
 alter table public.users add column if not exists updated_at timestamptz not null default now();
 
@@ -77,6 +79,10 @@ create table if not exists public.kv_store_5dacf80d (
   value jsonb not null
 );
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('avatars', 'avatars', true, 2097152, array['image/png', 'image/jpeg', 'image/webp'])
+on conflict (id) do nothing;
+
 alter table public.kv_store_5dacf80d enable row level security;
 
 drop policy if exists "Service role manages kv store" on public.kv_store_5dacf80d;
@@ -85,3 +91,44 @@ on public.kv_store_5dacf80d
 for all
 using (auth.role() = 'service_role')
 with check (auth.role() = 'service_role');
+
+drop policy if exists "Public avatar access" on storage.objects;
+create policy "Public avatar access"
+on storage.objects
+for select
+to public
+using (bucket_id = 'avatars');
+
+drop policy if exists "Users can upload their avatar" on storage.objects;
+create policy "Users can upload their avatar"
+on storage.objects
+for insert
+to authenticated
+with check (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = (select auth.jwt()->>'sub')
+);
+
+drop policy if exists "Users can update their avatar" on storage.objects;
+create policy "Users can update their avatar"
+on storage.objects
+for update
+to authenticated
+using (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = (select auth.jwt()->>'sub')
+)
+with check (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = (select auth.jwt()->>'sub')
+);
+
+drop policy if exists "Users can delete their avatar" on storage.objects;
+create policy "Users can delete their avatar"
+on storage.objects
+for delete
+to authenticated
+using (
+  bucket_id = 'avatars'
+  and (storage.foldername(name))[1] = (select auth.jwt()->>'sub')
+);
