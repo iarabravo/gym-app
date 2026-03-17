@@ -146,9 +146,9 @@ export default function EditProfile() {
         console.error('Error updating profile:', responseData);
         alert(`Error al actualizar el perfil: ${responseData.error || 'Error desconocido'}\n${responseData.details || ''}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
-      alert('Error al actualizar el perfil. Por favor intenta de nuevo.');
+      alert(error?.message || 'Error al actualizar el perfil. Por favor intenta de nuevo.');
     } finally {
       setSaving(false);
     }
