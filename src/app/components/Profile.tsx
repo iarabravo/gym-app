@@ -149,7 +149,7 @@ export default function Profile() {
             </div>
             <div>
               <p className="text-xs text-slate-400 mb-1">DNI</p>
-              <p className="font-semibold">{profile?.dni || '12345678'}</p>
+              <p className="font-semibold">{profile?.dni || 'Sin DNI cargado'}</p>
             </div>
           </div>
         </div>

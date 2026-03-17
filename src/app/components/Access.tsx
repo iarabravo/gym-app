@@ -10,20 +10,45 @@ export default function Access() {
   const navigate = useNavigate();
   const { accessToken } = useAuth();
   const [accessMethod, setAccessMethod] = useState<'qr' | 'wallet' | 'dni' | 'fingerprint'>('qr');
+  const [profile, setProfile] = useState<any>(null);
   const [qrCode, setQrCode] = useState('');
   const [accessCode, setAccessCode] = useState('');
   const [expiresAt, setExpiresAt] = useState('');
   const [loading, setLoading] = useState(false);
+  const [walletLoading, setWalletLoading] = useState<'apple' | 'google' | null>(null);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [noMembership, setNoMembership] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    if (accessMethod === 'qr') {
+    if (accessToken) {
+      fetchProfile();
+    }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (accessMethod === 'qr' || accessMethod === 'wallet') {
       generateQRCode();
     }
   }, [accessMethod]);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await fetch(
+        functionsUrl('/profile'),
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        }
+      );
+      const data = await response.json();
+      setProfile(data.profile);
+    } catch (error) {
+      console.error('Error fetching access profile:', error);
+    }
+  };
 
   const generateQRCode = async () => {
     setLoading(true);
@@ -69,6 +94,7 @@ export default function Access() {
       console.log('QR generated successfully:', data);
       setAccessCode(data.accessCode);
       setExpiresAt(data.expiresAt);
+      setQrCode('');
 
       // Generate QR code
       if (canvasRef.current) {
@@ -81,6 +107,16 @@ export default function Access() {
           }
         });
       }
+
+      const qrDataUrl = await QRCodeLib.toDataURL(data.accessCode, {
+        width: 280,
+        margin: 2,
+        color: {
+          dark: '#3B82F6',
+          light: '#FFFFFF'
+        }
+      });
+      setQrCode(qrDataUrl);
     } catch (error: any) {
       console.error('Error generating QR:', error);
       setError(error.message || 'Error al generar código QR');
@@ -124,6 +160,35 @@ export default function Access() {
       console.error('Error logging entry:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openWalletPass = async (provider: 'apple' | 'google') => {
+    setWalletLoading(provider);
+    try {
+      const response = await fetch(
+        functionsUrl(`/access/wallet/${provider}`),
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`
+          }
+        }
+      );
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `No se pudo abrir ${provider === 'apple' ? 'Apple Wallet' : 'Google Wallet'}`);
+      }
+
+      const destinationUrl = data.passUrl || data.saveUrl;
+      const openedWindow = window.open(destinationUrl, '_blank', 'noopener,noreferrer');
+      if (!openedWindow) {
+        window.location.assign(destinationUrl);
+      }
+    } catch (error: any) {
+      alert(error?.message || 'No se pudo abrir el wallet');
+    } finally {
+      setWalletLoading(null);
     }
   };
 
@@ -264,18 +329,69 @@ export default function Access() {
         {/* Wallet Pass */}
         {accessMethod === 'wallet' && (
           <div className="bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 rounded-2xl p-6">
-            <div className="flex flex-col items-center text-center">
-              <Wallet className="w-16 h-16 text-blue-400 mb-4" />
-              <h3 className="text-xl font-bold mb-2">Wallet Pass</h3>
-              <p className="text-slate-400 mb-6">
-                Agrega tu pase a Apple Wallet o Google Pay para acceso rápido
+            <div className="space-y-5">
+              <div className="flex items-center gap-3">
+                <Wallet className="w-6 h-6 text-blue-400" />
+                <div>
+                  <h3 className="text-xl font-bold">Wallet Pass</h3>
+                  <p className="text-sm text-slate-400">Tarjeta visual para Apple Wallet o Google Wallet</p>
+                </div>
+              </div>
+
+              <div className="rounded-3xl overflow-hidden border border-blue-500/30 bg-gradient-to-br from-blue-600 via-indigo-600 to-slate-950 p-5 shadow-xl">
+                <div className="flex items-start justify-between mb-6">
+                  <div>
+                    <p className="text-xs uppercase tracking-[0.24em] text-blue-100/80 mb-2">GymApp</p>
+                    <h4 className="text-2xl font-bold">Acceso al Gym</h4>
+                    <p className="text-sm text-blue-100/80 mt-1">{profile?.name || 'Usuario'}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center">
+                    <Wallet className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
+                  <div>
+                    <p className="text-xs text-blue-100/70 mb-1">Documento</p>
+                    <p className="text-lg font-semibold">{profile?.dni || 'Sin DNI cargado'}</p>
+                    <p className="text-xs text-blue-100/70 mt-4 mb-1">Codigo de acceso</p>
+                    <p className="font-mono text-sm break-all">{accessCode || 'Generando...'}</p>
+                  </div>
+
+                  <div className="bg-white p-2 rounded-2xl">
+                    {qrCode ? (
+                      <img
+                        src={qrCode}
+                        alt="QR de acceso al gym"
+                        className="w-24 h-24 rounded-xl"
+                      />
+                    ) : (
+                      <div className="w-24 h-24 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 text-xs text-center px-2">
+                        Generando QR
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-slate-400 text-sm">
+                Esta es la tarjeta de acceso del gimnasio. La dejamos diseñada para luego conectarla de verdad con Apple Wallet o Google Wallet.
               </p>
+
               <div className="flex gap-3">
-                <button className="px-6 py-3 bg-slate-950 rounded-lg font-medium hover:bg-slate-800 transition-colors">
-                  Apple Wallet
+                <button
+                  onClick={() => openWalletPass('apple')}
+                  disabled={walletLoading !== null}
+                  className="flex-1 px-4 py-3 bg-slate-950 rounded-xl font-medium hover:bg-slate-800 transition-colors disabled:opacity-60"
+                >
+                  {walletLoading === 'apple' ? 'Abriendo...' : 'Apple Wallet'}
                 </button>
-                <button className="px-6 py-3 bg-slate-950 rounded-lg font-medium hover:bg-slate-800 transition-colors">
-                  Google Pay
+                <button
+                  onClick={() => openWalletPass('google')}
+                  disabled={walletLoading !== null}
+                  className="flex-1 px-4 py-3 bg-slate-950 rounded-xl font-medium hover:bg-slate-800 transition-colors disabled:opacity-60"
+                >
+                  {walletLoading === 'google' ? 'Abriendo...' : 'Google Wallet'}
                 </button>
               </div>
             </div>
@@ -293,7 +409,7 @@ export default function Access() {
               </p>
               <div className="bg-slate-950 rounded-xl p-4 w-full">
                 <p className="text-sm text-slate-500 mb-1">Tu documento registrado</p>
-                <p className="text-2xl font-mono font-bold">12345678</p>
+                <p className="text-2xl font-mono font-bold">{profile?.dni || 'Sin DNI cargado'}</p>
               </div>
             </div>
           </div>

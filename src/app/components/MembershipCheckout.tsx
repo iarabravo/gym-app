@@ -5,7 +5,7 @@ import { useAuth } from './AuthContext';
 import { functionsUrl } from '@project-supabase/config';
 
 const plans = [
-  { id: 'basic', name: 'Basico', price: 1 },
+  { id: 'basic', name: 'Basico', price: 100 },
   { id: 'premium', name: 'Premium', price: 49 },
   { id: 'vip', name: 'VIP', price: 79 },
 ];

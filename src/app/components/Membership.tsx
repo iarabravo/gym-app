@@ -118,7 +118,7 @@ export default function Membership() {
     {
       id: 'basic',
       name: 'Básico',
-      price: 1,
+      price: 100,
       icon: Zap,
       color: 'from-blue-500 to-cyan-500',
       features: [

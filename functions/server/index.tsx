@@ -15,13 +15,65 @@ const supabase = createClient(
 );
 
 const PLAN_CATALOG: Record<string, { id: string; name: string; price: number }> = {
-  basic: { id: 'basic', name: 'Basico', price: 1 },
+  basic: { id: 'basic', name: 'Basico', price: 100 },
   premium: { id: 'premium', name: 'Premium', price: 49 },
   vip: { id: 'vip', name: 'VIP', price: 79 },
 };
 
 function getPlanConfig(planId: string) {
   return PLAN_CATALOG[planId];
+}
+
+function base64UrlEncode(input: string | Uint8Array) {
+  const bytes = typeof input === 'string' ? new TextEncoder().encode(input) : input;
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function pemToArrayBuffer(pem: string) {
+  const sanitized = pem
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s+/g, '');
+  const binaryString = atob(sanitized);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i += 1) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
+
+async function signJwtWithServiceAccount(payload: Record<string, unknown>, privateKeyPem: string) {
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT',
+  };
+
+  const encodedHeader = base64UrlEncode(JSON.stringify(header));
+  const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+  const signingInput = `${encodedHeader}.${encodedPayload}`;
+
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    pemToArrayBuffer(privateKeyPem),
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256',
+    },
+    false,
+    ['sign']
+  );
+
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    new TextEncoder().encode(signingInput)
+  );
+
+  return `${signingInput}.${base64UrlEncode(new Uint8Array(signature))}`;
 }
 
 async function activateMembershipForUser(userId: string, plan: string, paymentMethod: string) {
@@ -1029,6 +1081,158 @@ app.post('/make-server-5dacf80d/access/entry', async (c) => {
   } catch (error) {
     console.log(`Entry logging error: ${error}`);
     return c.json({ error: 'Error logging entry' }, 500);
+  }
+});
+
+app.get('/make-server-5dacf80d/access/wallet/google', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+
+    if (!user?.id || error) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const issuerId = Deno.env.get('GOOGLE_WALLET_ISSUER_ID');
+    const serviceAccountEmail = Deno.env.get('GOOGLE_WALLET_CLIENT_EMAIL');
+    const privateKey = Deno.env.get('GOOGLE_WALLET_PRIVATE_KEY');
+    const logoUrl = Deno.env.get('GOOGLE_WALLET_LOGO_URL');
+
+    if (!issuerId || !serviceAccountEmail || !privateKey) {
+      return c.json({
+        error: 'Google Wallet no esta configurado todavia. Faltan GOOGLE_WALLET_ISSUER_ID, GOOGLE_WALLET_CLIENT_EMAIL y GOOGLE_WALLET_PRIVATE_KEY.',
+      }, 501);
+    }
+
+    const profile = await kv.get(`user:${user.id}`);
+    const membership = await kv.get(`membership:${user.id}`);
+    const qrEntry = await kv.getByPrefix(`access_qr:${user.id}:`);
+    const latestQr = qrEntry.sort((a, b) => new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime())[0];
+    const accessCode = latestQr?.accessCode || `GYM-${user.id}-${Date.now()}`;
+    const objectSuffix = `gym_access_${user.id.replace(/-/g, '')}`;
+    const classSuffix = 'gym_access';
+    const classId = `${issuerId}.${classSuffix}`;
+    const objectId = `${issuerId}.${objectSuffix}`;
+
+    const walletPayload: Record<string, unknown> = {
+      iss: serviceAccountEmail,
+      aud: 'google',
+      typ: 'savetowallet',
+      iat: Math.floor(Date.now() / 1000),
+      origins: [],
+      payload: {
+        genericClasses: [
+          {
+            id: classId,
+            classTemplateInfo: {
+              cardTemplateOverride: {
+                cardRowTemplateInfos: [
+                  {
+                    twoItems: {
+                      startItem: {
+                        firstValue: {
+                          fields: [{ fieldPath: "object.textModulesData['dni']" }]
+                        }
+                      },
+                      endItem: {
+                        firstValue: {
+                          fields: [{ fieldPath: "object.textModulesData['plan']" }]
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            issuerName: 'GymApp',
+            reviewStatus: 'UNDER_REVIEW',
+            hexBackgroundColor: '#1d4ed8',
+            logo: logoUrl ? {
+              sourceUri: { uri: logoUrl },
+              contentDescription: {
+                defaultValue: {
+                  language: 'es-AR',
+                  value: 'Logo GymApp'
+                }
+              }
+            } : undefined,
+          }
+        ],
+        genericObjects: [
+          {
+            id: objectId,
+            classId,
+            state: 'ACTIVE',
+            cardTitle: {
+              defaultValue: {
+                language: 'es-AR',
+                value: 'Acceso al Gym'
+              }
+            },
+            header: {
+              defaultValue: {
+                language: 'es-AR',
+                value: profile?.name || user.email || 'Usuario'
+              }
+            },
+            subheader: {
+              defaultValue: {
+                language: 'es-AR',
+                value: membership?.plan ? `Plan ${membership.plan}` : 'Miembro GymApp'
+              }
+            },
+            barcode: {
+              type: 'QR_CODE',
+              value: accessCode,
+              alternateText: accessCode,
+            },
+            textModulesData: [
+              {
+                id: 'dni',
+                header: 'DNI',
+                body: profile?.dni || 'Sin DNI cargado',
+              },
+              {
+                id: 'plan',
+                header: 'Plan',
+                body: membership?.plan || 'Sin membresia activa',
+              }
+            ]
+          }
+        ]
+      }
+    };
+
+    const token = await signJwtWithServiceAccount(walletPayload, privateKey.replace(/\\n/g, '\n'));
+    return c.json({
+      saveUrl: `https://pay.google.com/gp/v/save/${token}`,
+    });
+  } catch (error) {
+    console.log(`Google Wallet generation error: ${error}`);
+    return c.json({ error: 'Error generando el pase para Google Wallet' }, 500);
+  }
+});
+
+app.get('/make-server-5dacf80d/access/wallet/apple', async (c) => {
+  try {
+    const accessToken = c.req.header('Authorization')?.split(' ')[1];
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+
+    if (!user?.id || error) {
+      return c.json({ error: 'Unauthorized' }, 401);
+    }
+
+    const passUrl = Deno.env.get('APPLE_WALLET_PASS_URL');
+    if (!passUrl) {
+      return c.json({
+        error: 'Apple Wallet no esta configurado todavia. Falta APPLE_WALLET_PASS_URL o un servicio que genere el archivo .pkpass firmado.',
+      }, 501);
+    }
+
+    return c.json({ passUrl });
+  } catch (error) {
+    console.log(`Apple Wallet generation error: ${error}`);
+    return c.json({ error: 'Error generando el pase para Apple Wallet' }, 500);
   }
 });
 

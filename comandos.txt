@@ -12,3 +12,6 @@ cd /Users/iarabravo/Desktop/Gym
 npm run build
 npx cap sync ios
 open ios/App/App.xcworkspace
+
+GOOGLE_WALLET_ISSUER_ID: 3388000000023087304
+
