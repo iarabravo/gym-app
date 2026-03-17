@@ -25,6 +25,10 @@ export default function Membership() {
   const paymentSuccess = location.state?.paymentSuccess;
   const planName = location.state?.planName;
 
+  const handleBack = () => {
+    navigate(location.state?.from || '/');
+  };
+
   useEffect(() => {
     if (!accessToken) {
       return;
@@ -176,7 +180,7 @@ export default function Membership() {
         <div className="max-w-md mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate('/')}
+              onClick={handleBack}
               className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />

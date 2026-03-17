@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useAuth } from './AuthContext';
 import { 
   ArrowLeft, 
@@ -16,6 +16,7 @@ import { functionsUrl } from '@project-supabase/config';
 
 export default function Profile() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, accessToken, signOut } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [membership, setMembership] = useState<any>(null);
@@ -66,19 +67,23 @@ export default function Profile() {
     }
   };
 
+  const returnToProfile = {
+    from: location.pathname,
+  };
+
   const menuSections = [
     {
       title: 'Cuenta',
       items: [
         { icon: User, label: 'Información personal', action: () => navigate('/profile/edit') },
         { icon: Mail, label: 'Email y contraseña', action: () => navigate('/profile/security') },
-        { icon: CreditCard, label: 'Membresías', action: () => navigate('/membership') }
+        { icon: CreditCard, label: 'Membresías', action: () => navigate('/membership', { state: returnToProfile }) }
       ]
     },
     {
       title: 'Preferencias',
       items: [
-        { icon: Bell, label: 'Notificaciones', action: () => navigate('/notifications') },
+        { icon: Bell, label: 'Notificaciones', action: () => navigate('/notifications', { state: returnToProfile }) },
         { icon: Settings, label: 'Configuración', action: () => navigate('/settings') }
       ]
     }
@@ -166,7 +171,7 @@ export default function Profile() {
               </div>
             </div>
             <button
-              onClick={() => navigate('/membership')}
+              onClick={() => navigate('/membership', { state: returnToProfile })}
               className="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 py-2 rounded-lg text-sm font-medium transition-colors"
             >
               Ver detalles de membresía

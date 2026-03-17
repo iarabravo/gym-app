@@ -12,9 +12,7 @@ import {
   Users,
   Activity,
   Clock,
-  ChevronRight,
-  Menu,
-  X
+  ChevronRight
 } from 'lucide-react';
 import { functionsUrl, supabaseAnonKey } from '@project-supabase/config';
 import { supabase } from '@project-supabase/client';
@@ -25,7 +23,6 @@ export default function Home() {
   const [profile, setProfile] = useState<any>(null);
   const [occupancy, setOccupancy] = useState<any>(null);
   const [notifications, setNotifications] = useState<any[]>([]);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -152,19 +149,13 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-2">
             <button 
-              onClick={() => navigate('/notifications')}
+              onClick={() => navigate('/notifications', { state: { from: '/' } })}
               className="relative p-2 hover:bg-slate-800 rounded-lg transition-colors"
             >
               <Bell className="w-5 h-5" />
               {notifications.length > 0 && (
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               )}
-            </button>
-            <button 
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="p-2 hover:bg-slate-800 rounded-lg transition-colors md:hidden"
-            >
-              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
