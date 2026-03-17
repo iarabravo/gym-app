@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from './AuthContext';
-import { ArrowLeft, Camera, Save, User } from 'lucide-react';
+import { ArrowLeft, Camera, Phone, Save, User } from 'lucide-react';
 import { functionsUrl } from '@project-supabase/config';
 import { supabase } from '@project-supabase/client';
 
