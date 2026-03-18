@@ -1,9 +1,9 @@
-Iara hacer esto: 
+SI EDITAS EL ARCHIVO: 
 git add .
 git commit -m "cambios"
 git push
 
-Ainara hacer esto:
+SI QUERES ACTUALIZARLO:
 git pull
 
 
