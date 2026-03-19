@@ -3,3 +3,17 @@ dist/
 .DS_Store
 .env
 .env.local
+supabase/.temp/
+android/.idea/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/capacitor-cordova-android-plugins/
+ios/App/App/public/
+ios/App/App.xcodeproj/xcuserdata/
+ios/App/App.xcodeproj/project.xcworkspace/
+ios/App/App.xcworkspace/xcuserdata/
+ios/App/App.xcworkspace/xcshareddata/swiftpm/
+ios/App/Pods/
+ios/capacitor-cordova-ios-plugins/
