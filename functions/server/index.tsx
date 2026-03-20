@@ -317,6 +317,18 @@ app.get('/make-server-5dacf80d/profile', async (c) => {
       phone: userData.telefono,
       level: userData.nivel,
       objetivo: userData.objetivo,
+      birthdate: userData.birthdate || kvProfile?.birthdate || '',
+      address: userData.address || kvProfile?.address || '',
+      emergencyContact: userData.emergency_contact || kvProfile?.emergencyContact || '',
+      emergencyPhone: userData.emergency_phone || kvProfile?.emergencyPhone || '',
+      medicalInsurance: userData.medical_insurance || kvProfile?.medicalInsurance || '',
+      bloodType: userData.blood_type || kvProfile?.bloodType || '',
+      allergies: userData.allergies || kvProfile?.allergies || '',
+      medicalConditions: userData.medical_conditions || kvProfile?.medicalConditions || '',
+      medications: userData.medications || kvProfile?.medications || '',
+      recentInjuries: userData.recent_injuries || kvProfile?.recentInjuries || '',
+      doctorClearance: userData.doctor_clearance || kvProfile?.doctorClearance || '',
+      medicalNotes: userData.medical_notes || kvProfile?.medicalNotes || '',
       avatarUrl: userData.avatar_url,
       createdAt: userData.created_at,
       // Include KV data for backward compatibility
@@ -377,10 +389,22 @@ app.put('/make-server-5dacf80d/profile', async (c) => {
     const updateData: any = {};
     if (nombre !== undefined) updateData.nombre = nombre;
     if (apellido !== undefined) updateData.apellido = apellido;
-    if (body.phone) updateData.telefono = body.phone;
-    if (body.dni) updateData.dni = body.dni;
-    if (body.level) updateData.nivel = body.level;
-    if (body.objetivo) updateData.objetivo = body.objetivo;
+    if (body.phone !== undefined) updateData.telefono = body.phone;
+    if (body.dni !== undefined) updateData.dni = body.dni;
+    if (body.level !== undefined) updateData.nivel = body.level;
+    if (body.objetivo !== undefined) updateData.objetivo = body.objetivo;
+    if (body.birthdate !== undefined) updateData.birthdate = body.birthdate;
+    if (body.address !== undefined) updateData.address = body.address;
+    if (body.emergencyContact !== undefined) updateData.emergency_contact = body.emergencyContact;
+    if (body.emergencyPhone !== undefined) updateData.emergency_phone = body.emergencyPhone;
+    if (body.medicalInsurance !== undefined) updateData.medical_insurance = body.medicalInsurance;
+    if (body.bloodType !== undefined) updateData.blood_type = body.bloodType;
+    if (body.allergies !== undefined) updateData.allergies = body.allergies;
+    if (body.medicalConditions !== undefined) updateData.medical_conditions = body.medicalConditions;
+    if (body.medications !== undefined) updateData.medications = body.medications;
+    if (body.recentInjuries !== undefined) updateData.recent_injuries = body.recentInjuries;
+    if (body.doctorClearance !== undefined) updateData.doctor_clearance = body.doctorClearance;
+    if (body.medicalNotes !== undefined) updateData.medical_notes = body.medicalNotes;
     if (body.avatarUrl !== undefined) updateData.avatar_url = body.avatarUrl;
 
     if (Object.keys(updateData).length > 0) {
@@ -411,6 +435,14 @@ app.put('/make-server-5dacf80d/profile', async (c) => {
         address: body.address || kvProfile.address,
         emergencyContact: body.emergencyContact || kvProfile.emergencyContact,
         emergencyPhone: body.emergencyPhone || kvProfile.emergencyPhone,
+        medicalInsurance: body.medicalInsurance || kvProfile.medicalInsurance,
+        bloodType: body.bloodType || kvProfile.bloodType,
+        allergies: body.allergies || kvProfile.allergies,
+        medicalConditions: body.medicalConditions || kvProfile.medicalConditions,
+        medications: body.medications || kvProfile.medications,
+        recentInjuries: body.recentInjuries || kvProfile.recentInjuries,
+        doctorClearance: body.doctorClearance || kvProfile.doctorClearance,
+        medicalNotes: body.medicalNotes || kvProfile.medicalNotes,
         updatedAt: new Date().toISOString()
       };
 
@@ -445,6 +477,18 @@ app.put('/make-server-5dacf80d/profile', async (c) => {
       phone: finalProfile.telefono,
       level: finalProfile.nivel,
       objetivo: finalProfile.objetivo,
+      birthdate: finalProfile.birthdate || kvProfile?.birthdate || '',
+      address: finalProfile.address || kvProfile?.address || '',
+      emergencyContact: finalProfile.emergency_contact || kvProfile?.emergencyContact || '',
+      emergencyPhone: finalProfile.emergency_phone || kvProfile?.emergencyPhone || '',
+      medicalInsurance: finalProfile.medical_insurance || kvProfile?.medicalInsurance || '',
+      bloodType: finalProfile.blood_type || kvProfile?.bloodType || '',
+      allergies: finalProfile.allergies || kvProfile?.allergies || '',
+      medicalConditions: finalProfile.medical_conditions || kvProfile?.medicalConditions || '',
+      medications: finalProfile.medications || kvProfile?.medications || '',
+      recentInjuries: finalProfile.recent_injuries || kvProfile?.recentInjuries || '',
+      doctorClearance: finalProfile.doctor_clearance || kvProfile?.doctorClearance || '',
+      medicalNotes: finalProfile.medical_notes || kvProfile?.medicalNotes || '',
       avatarUrl: finalProfile.avatar_url,
       membershipStatus: kvProfile?.membershipStatus || 'inactive',
       progress: kvProfile?.progress || { workoutsCompleted: 0, totalMinutes: 0, streak: 0 }

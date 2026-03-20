@@ -10,6 +10,18 @@ create table if not exists public.users (
   telefono text not null default '',
   nivel text not null default 'principiante',
   objetivo text not null default '',
+  birthdate text not null default '',
+  address text not null default '',
+  emergency_contact text not null default '',
+  emergency_phone text not null default '',
+  medical_insurance text not null default '',
+  blood_type text not null default '',
+  allergies text not null default '',
+  medical_conditions text not null default '',
+  medications text not null default '',
+  recent_injuries text not null default '',
+  doctor_clearance text not null default '',
+  medical_notes text not null default '',
   avatar_url text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -24,6 +36,18 @@ alter table public.users add column if not exists dni text not null default '';
 alter table public.users add column if not exists telefono text not null default '';
 alter table public.users add column if not exists nivel text not null default 'principiante';
 alter table public.users add column if not exists objetivo text not null default '';
+alter table public.users add column if not exists birthdate text not null default '';
+alter table public.users add column if not exists address text not null default '';
+alter table public.users add column if not exists emergency_contact text not null default '';
+alter table public.users add column if not exists emergency_phone text not null default '';
+alter table public.users add column if not exists medical_insurance text not null default '';
+alter table public.users add column if not exists blood_type text not null default '';
+alter table public.users add column if not exists allergies text not null default '';
+alter table public.users add column if not exists medical_conditions text not null default '';
+alter table public.users add column if not exists medications text not null default '';
+alter table public.users add column if not exists recent_injuries text not null default '';
+alter table public.users add column if not exists doctor_clearance text not null default '';
+alter table public.users add column if not exists medical_notes text not null default '';
 alter table public.users add column if not exists avatar_url text;
 alter table public.users add column if not exists created_at timestamptz not null default now();
 alter table public.users add column if not exists updated_at timestamptz not null default now();
